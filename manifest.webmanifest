@@ -1,0 +1,9 @@
+{
+  "name": "FOUNDATION / 28",
+  "short_name": "F/28",
+  "description": "Four-week calisthenics return protocol with walking, timers, and local progress tracking.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0d0e10",
+  "theme_color": "#111214"
+}

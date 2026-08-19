@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111214">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Foundation 28">
+<link rel="manifest" href="manifest.webmanifest">
+<title>FOUNDATION / 28</title>
+<style>
+:root{
+  --bg:#0d0e10; --panel:#15171a; --panel2:#1b1e22; --line:#2a2e34;
+  --text:#f3f4f5; --muted:#a5abb3; --dim:#747b85; --ok:#dfe6df;
+  --warn:#f2d7a2; --danger:#f0b0aa; --radius:18px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif}
+body{min-height:100vh;padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+button,input,textarea{font:inherit}
+button{cursor:pointer}
+.app{max-width:720px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) 16px 24px}
+.brand{display:flex;align-items:flex-end;justify-content:space-between;margin:2px 2px 18px}
+.brand h1{font-size:20px;letter-spacing:.16em;margin:0;font-weight:750}
+.brand .sub{font-size:12px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin:0 0 12px}
+.card.tight{padding:12px}
+.kicker{font-size:11px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:7px}
+h2,h3,p{margin-top:0}
+h2{font-size:24px;line-height:1.12;margin-bottom:8px}
+h3{font-size:16px;margin-bottom:8px}
+p{line-height:1.48;color:#d7d9dc}
+.muted{color:var(--muted)}
+.small{font-size:12px;color:var(--muted);line-height:1.45}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:12px}
+.stat strong{font-size:20px;display:block}
+.stat span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.btn{width:100%;border:none;border-radius:14px;background:#f0f1f2;color:#111214;padding:14px 16px;font-weight:750}
+.btn.secondary{background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+.btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
+.btn.warn{background:#e9d7b7;color:#1a1711}
+.btn.danger{background:#3a2222;color:#ffd9d4;border:1px solid #593131}
+.btn:disabled{opacity:.38;cursor:not-allowed}
+.row{display:flex;align-items:center;gap:10px}
+.row.between{justify-content:space-between}
+.row.wrap{flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--panel2);border-radius:999px;padding:7px 10px;font-size:12px;color:#d5d8dc}
+.chip.done{background:#243028;border-color:#36483c}
+.progress{height:8px;background:#25282d;border-radius:99px;overflow:hidden}
+.progress>i{display:block;height:100%;background:#e4e7e4;width:0%;transition:width .25s}
+.daygrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.day{aspect-ratio:1;border:1px solid var(--line);border-radius:12px;background:var(--panel2);color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px}
+.day span{font-size:11px;color:var(--muted)}
+.day b{font-size:15px}
+.day.done{border-color:#607064;background:#263029}
+.day.walk{box-shadow:inset 0 -3px 0 #777}
+.day.recovery{background:#24262b}
+.day.selected{outline:2px solid #e7e9eb;outline-offset:1px}
+.list{display:flex;flex-direction:column;gap:8px}
+.item{border:1px solid var(--line);background:var(--panel2);border-radius:14px;padding:12px}
+.item.done{opacity:.65}
+.item .meta{font-size:12px;color:var(--muted)}
+label.toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}
+label.toggle:last-child{border-bottom:0}
+input[type="checkbox"]{width:22px;height:22px}
+input[type="date"],input[type="number"],textarea{
+  width:100%;background:#101215;border:1px solid var(--line);color:var(--text);border-radius:12px;padding:12px
+}
+textarea{min-height:90px;resize:vertical}
+.timerWrap{text-align:center;padding:12px 0}
+.timer{font-variant-numeric:tabular-nums;font-size:64px;font-weight:800;letter-spacing:-.04em;line-height:1}
+.timerLabel{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-top:8px}
+.heroMove{font-size:29px;font-weight:800;line-height:1.07;margin-bottom:8px}
+.target{font-size:17px;color:#e5e7e9;margin-bottom:10px}
+.instruction{color:#c6c9ce;line-height:1.5}
+.note{border-left:3px solid #777;padding-left:11px;color:var(--muted);font-size:13px;line-height:1.45}
+.alert{border:1px solid #5b3f31;background:#271f1b;border-radius:14px;padding:12px;color:#f1ddcc}
+.alert.danger{border-color:#643938;background:#2b1e1f;color:#f2cfcc}
+.bottomnav{
+ position:fixed;left:0;right:0;bottom:0;background:rgba(13,14,16,.94);backdrop-filter:blur(18px);
+ border-top:1px solid var(--line);padding:8px 8px calc(8px + env(safe-area-inset-bottom));z-index:20
+}
+.bottomnav .inner{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:2px}
+.navbtn{border:0;background:transparent;color:var(--dim);padding:8px 2px;border-radius:10px;font-size:10px}
+.navbtn b{display:block;font-size:18px;line-height:1.1;margin-bottom:2px}
+.navbtn.active{color:var(--text);background:#1d2024}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;align-items:flex-end;z-index:50}
+.modal.show{display:flex}
+.sheet{width:100%;max-width:720px;margin:0 auto;background:#14161a;border:1px solid var(--line);border-bottom:0;border-radius:24px 24px 0 0;padding:18px 16px calc(20px + env(safe-area-inset-bottom));max-height:92vh;overflow:auto}
+.stepTop{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px}
+.stepCount{font-size:12px;color:var(--muted)}
+.repbox{display:grid;grid-template-columns:44px 1fr 44px;gap:8px;align-items:center;margin:12px 0}
+.repbox button{height:44px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:22px}
+.repbox strong{text-align:center;font-size:24px}
+hr{border:0;border-top:1px solid var(--line);margin:14px 0}
+.sectionTitle{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin:20px 2px 8px}
+.pillbar{display:flex;gap:8px;overflow:auto;padding-bottom:3px}
+.pillbar button{white-space:nowrap;border:1px solid var(--line);background:var(--panel2);color:var(--muted);border-radius:999px;padding:9px 12px}
+.pillbar button.active{background:#efefef;color:#111;border-color:#efefef}
+table{width:100%;border-collapse:collapse}
+td,th{padding:9px 6px;border-bottom:1px solid var(--line);text-align:left;font-size:13px}
+th{color:var(--muted);font-weight:600}
+.hidden{display:none!important}
+@media (max-width:380px){.timer{font-size:56px}.heroMove{font-size:25px}.app{padding-left:12px;padding-right:12px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="brand">
+    <div>
+      <div class="sub">Four-week return protocol</div>
+      <h1>FOUNDATION / 28</h1>
+    </div>
+    <div class="sub" id="dateBadge"></div>
+  </div>
+  <main id="view"></main>
+</div>
+
+<nav class="bottomnav">
+  <div class="inner">
+    <button class="navbtn active" data-view="today"><b>●</b>Today</button>
+    <button class="navbtn" data-view="program"><b>▦</b>Program</button>
+    <button class="navbtn" data-view="history"><b>≡</b>History</button>
+    <button class="navbtn" data-view="metrics"><b>↗</b>Metrics</button>
+    <button class="navbtn" data-view="settings"><b>⚙</b>Settings</button>
+  </div>
+</nav>
+
+<div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+
+<script>
+const PROGRAM_START_DEFAULT = "2026-08-20";
+const STORE = "foundation28.v1";
+
+const phase1 = [
+ {name:"Squat + Reach", target:"10 reps", reps:10, cue:"Use a comfortable stance. Sit under control, stand through the full foot, finish with glute tension, then reach overhead without forcing the low back."},
+ {name:"Shoulder Pulse Circle", target:"15 forward + 15 backward", reps:30, cue:"Arms extended around shoulder height; make tiny controlled circles. Keep the neck relaxed and ribs down."},
+ {name:"Seated Forward Bend Stretches", target:"10 gentle reps", reps:10, cue:"Move only through a comfortable range. Exhale into the reach; do not bounce or force the spine into pain."}
+];
+
+const moves = [
+ {name:"Burpees", w1:"5 reps · no jump", w1reps:5, w3:"8–10 reps", w3reps:8, cue:"No-jump version in Week 1. Keep the trunk controlled through the plank and stand tall before the next rep."},
+ {name:"Prisoner Squats", w1:"10 reps", w1reps:10, w3:"15–20 reps", w3reps:15, cue:"Hands behind head without pulling the neck. Keep chest controlled and knees tracking with the feet."},
+ {name:"Pushups", w1:"3 reps", w1reps:3, w3:"5–7 reps", w3reps:5, cue:"Maintain a single line from shoulders through hips. Choose a regression if clean reps are not available."},
+ {name:"Mountain Climbers", w1:"15 sec", w1secs:15, w3:"30 sec", w3secs:30, cue:"Keep shoulders stable over the hands and drive knees at a pace that preserves trunk control."},
+ {name:"Push-Up Holds", w1:"2 reps · 1-sec pause", w1reps:2, w3:"5 reps · 2-sec pause", w3reps:5, cue:"Use your established hold point. Keep shoulders organized; the pause should not collapse into the joints."},
+ {name:"Reverse Lunges", w1:"5 per leg", w1reps:10, w3:"10 per leg", w3reps:20, cue:"Step back under control, keep the front foot planted, and use a range that feels stable at the knee and hip."},
+ {name:"Crunches", w1:"8 total", w1reps:8, w3:"12–15 reps", w3reps:12, cue:"Use a controlled curl rather than momentum. Keep the neck relaxed."},
+ {name:"Wall Sit", w1:"20 sec", w1secs:20, w3:"40 sec", w3secs:40, cue:"Back supported, feet positioned so the knees are comfortable. Your target is approximately 90° only if pain-free."},
+ {name:"Shoulder Presses", w1:"10 reps", w1reps:10, w3:"15 reps", w3reps:15, cue:"Use the shoulder-press variation/load you intended for this routine. Keep ribs stacked; do not turn the press into a low-back extension."},
+ {name:"Squats", w1:"5 reps", w1reps:5, w3:"8–10 reps", w3reps:8, cue:"Use a controlled depth you can own. Keep balance over the full foot and finish each rep tall."}
+];
+
+const holds = [
+ {name:"Plank", cue:"Elbows under shoulders; brace without holding your breath. Stop before the low back begins to sag."},
+ {name:"Reverse Hollow Body Hold", cue:"On stomach: lift shoulders and legs only as far as you can control. Avoid cranking the neck or low back."},
+ {name:"Wall Sit", cue:"Back flat against the wall; aim for the prescribed position only if the knees remain comfortable."},
+ {name:"Door Frame Hang Hold", cue:"Only use a purpose-built bar or structure you have verified can support bodyweight. Do not hang from decorative door trim or an uncertain frame."},
+ {name:"Combat Crouch", cue:"Use your established combat-crouch position. Keep knee alignment controlled and breathe continuously."}
+];
+
+const phaseGoals = {
+  1:{title:"FOUNDATION & MOBILITY", goal:"Wake up the CNS; establish joint stability; normalize breathing.", hold:20},
+  2:{title:"INTERVAL INTEGRATION", goal:"Increase heart-rate recovery speed; build muscular endurance.", hold:30},
+  3:{title:"VOLUME SCALING", goal:"Simulate EMOM pressure; increase volume.", hold:45},
+  4:{title:"FULL INTEGRATION", goal:"Reach 100% specifications.", hold:60}
+};
+
+let state = loadState();
+let currentView = "today";
+let modalMode = null;
+let activeSessionDate = null;
+let sequence = [];
+let stepIndex = 0;
+let timer = null;
+let wakeLock = null;
+
+function defaultState(){
+ return {
+   startDate:PROGRAM_START_DEFAULT,
+   walkGoal:40,
+   walkSpeed:4,
+   sessions:{},
+   walks:{},
+   weights:[],
+   recovery:{},
+   settings:{sound:true,wake:true,confirmSafety:true}
+ };
+}
+function loadState(){
+ try{
+   const x=JSON.parse(localStorage.getItem(STORE));
+   return Object.assign(defaultState(),x||{}, {settings:Object.assign(defaultState().settings,(x||{}).settings||{})});
+ }catch(e){return defaultState();}
+}
+function save(){localStorage.setItem(STORE,JSON.stringify(state));}
+function isoDate(d=new Date()){
+ const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), day=String(d.getDate()).padStart(2,"0");
+ return `${y}-${m}-${day}`;
+}
+function parseLocal(s){const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d);}
+function dayDiff(a,b){return Math.floor((parseLocal(a)-parseLocal(b))/86400000);}
+function addDays(s,n){const d=parseLocal(s);d.setDate(d.getDate()+n);return isoDate(d);}
+function pretty(s){return parseLocal(s).toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"});}
+function weekForDate(date){
+ const idx=dayDiff(date,state.startDate);
+ if(idx<0) return 0;
+ if(idx>27) return 5;
+ return Math.floor(idx/7)+1;
+}
+function programDay(date){return dayDiff(date,state.startDate)+1;}
+function sessionFor(date){
+ if(!state.sessions[date]) state.sessions[date]={steps:{},startedAt:null,completedAt:null,rpe:null,notes:""};
+ return state.sessions[date];
+}
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
+function pct(n,d){return d?Math.round(n/d*100):0;}
+function today(){return isoDate(new Date());}
+
+function beep(freq=740,dur=.12){
+ if(!state.settings.sound) return;
+ try{
+   const C=window.AudioContext||window.webkitAudioContext; const c=new C(), o=c.createOscillator(), g=c.createGain();
+   o.frequency.value=freq; g.gain.value=.06; o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+dur);
+ }catch(e){}
+}
+async function keepAwake(){
+ if(!state.settings.wake || !("wakeLock" in navigator)) return;
+ try{wakeLock=await navigator.wakeLock.request("screen");}catch(e){}
+}
+function releaseWake(){try{wakeLock&&wakeLock.release();}catch(e){} wakeLock=null;}
+
+function setView(v){
+ currentView=v;
+ document.querySelectorAll(".navbtn").forEach(b=>b.classList.toggle("active",b.dataset.view===v));
+ render();
+}
+document.querySelectorAll(".navbtn").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
+
+function render(){
+ document.getElementById("dateBadge").textContent=pretty(today());
+ const el=document.getElementById("view");
+ if(currentView==="today") el.innerHTML=renderToday();
+ if(currentView==="program") el.innerHTML=renderProgram();
+ if(currentView==="history") el.innerHTML=renderHistory();
+ if(currentView==="metrics") el.innerHTML=renderMetrics();
+ if(currentView==="settings") el.innerHTML=renderSettings();
+ bind();
+}
+function bind(){
+ document.querySelectorAll("[data-action]").forEach(b=>b.addEventListener("click",()=>handle(b.dataset.action,b.dataset.arg)));
+ const st=document.getElementById("startDate"); if(st) st.onchange=e=>{state.startDate=e.target.value;save();render();};
+ const wg=document.getElementById("walkGoal"); if(wg) wg.onchange=e=>{state.walkGoal=Math.max(1,+e.target.value||40);save();};
+ const ws=document.getElementById("walkSpeed"); if(ws) ws.onchange=e=>{state.walkSpeed=Math.max(.5,+e.target.value||4);save();};
+ document.querySelectorAll("[data-setting]").forEach(x=>x.onchange=e=>{state.settings[x.dataset.setting]=e.target.checked;save();});
+}
+function handle(a,arg){
+ if(a==="startWorkout") openReadiness(arg||today());
+ if(a==="previewWorkout") openReadiness(state.startDate,true);
+ if(a==="startWalk") openWalk(arg||today());
+ if(a==="markRecovery"){state.recovery[arg||today()]={at:new Date().toISOString()};save();render();}
+ if(a==="openDay") openDay(+arg);
+ if(a==="addWeight") openWeight();
+ if(a==="export") exportData();
+ if(a==="reset") resetData();
+ if(a==="close") closeModal();
+}
+
+function renderToday(){
+ const d=today(), w=weekForDate(d), pd=programDay(d), sess=state.sessions[d], walk=state.walks[d], rec=state.recovery[d];
+ let intro="";
+ if(w===0){
+   intro=`<div class="card"><div class="kicker">Program begins ${pretty(state.startDate)}</div><h2>Tomorrow is Day 1.</h2><p>Today can stay as your existing 40-minute walk. You can preview the Week 1 runner now without writing a completion record.</p>
+   <button class="btn secondary" data-action="previewWorkout">Preview Week 1</button></div>`;
+ }else if(w===5){
+   intro=`<div class="card"><div class="kicker">Program complete</div><h2>28-day block finished.</h2><p>Your log remains available in History and Metrics. Change the start date in Settings if you intentionally begin a new block.</p></div>`;
+ }else{
+   const g=phaseGoals[w];
+   intro=`<div class="card">
+     <div class="kicker">Day ${pd} · Week ${w}</div>
+     <h2>${g.title}</h2><p>${g.goal}</p>
+     <div class="progress"><i style="width:${pct(pd-1,28)}%"></i></div>
+   </div>`;
+ }
+ const status = sess?.completedAt ? "Completed" : rec ? "Recovery logged" : "Not completed";
+ const can = w>=1&&w<=4;
+ return intro+`
+ <div class="grid2">
+  <div class="card tight">
+   <div class="kicker">Daily walk</div>
+   <h3>${state.walkGoal} min · ${state.walkSpeed} mph</h3>
+   <div class="small">${walk?.completedAt?"Completed "+(walk.actualMinutes||state.walkGoal)+" min":"Independent of calisthenics"}</div>
+   <div style="height:10px"></div>
+   <button class="btn ${walk?.completedAt?"secondary":""}" data-action="startWalk" data-arg="${d}">${walk?.completedAt?"Open walk":"Start walk"}</button>
+  </div>
+  <div class="card tight">
+   <div class="kicker">Calisthenics</div>
+   <h3>${can?`Week ${w}`:"Not scheduled"}</h3>
+   <div class="small">${status}</div>
+   <div style="height:10px"></div>
+   <button class="btn ${sess?.completedAt?"secondary":""}" ${can?"":"disabled"} data-action="startWorkout" data-arg="${d}">${sess?.completedAt?"Review / repeat":"Start session"}</button>
+  </div>
+ </div>
+ ${can&&!sess?.completedAt&&!rec?`<button class="btn ghost" data-action="markRecovery" data-arg="${d}">Log recovery day instead</button><div style="height:12px"></div>`:""}
+ <div class="card">
+   <div class="kicker">Readiness rule</div>
+   <p class="small" style="margin:0">Do not turn the calendar into a command. If you have chest pain, fainting, severe dizziness, unusual shortness of breath, a fast/irregular heartbeat, acute intoxication/medication overuse, or you cannot exercise with normal coordination, do not start the hard session.</p>
+ </div>`;
+}
+
+function renderProgram(){
+ let html=`<div class="card"><div class="kicker">28-day calendar</div><h2>Exact four-week progression</h2><p class="small">Each calendar day opens the specification for its week. A recovery day is recorded without pretending it was a workout.</p></div>`;
+ for(let w=1;w<=4;w++){
+   const g=phaseGoals[w];
+   html+=`<div class="sectionTitle">Week ${w} · ${g.title}</div><div class="card tight"><div class="daygrid">`;
+   for(let j=0;j<7;j++){
+     const day=(w-1)*7+j+1, date=addDays(state.startDate,day-1);
+     const s=state.sessions[date], wa=state.walks[date], r=state.recovery[date];
+     html+=`<button class="day ${s?.completedAt?"done":""} ${wa?.completedAt?"walk":""} ${r?"recovery":""}" data-action="openDay" data-arg="${day}"><span>D${day}</span><b>${parseLocal(date).getDate()}</b></button>`;
+   }
+   html+=`</div><div class="small" style="margin-top:10px">${g.goal} Phase III holds: ${g.hold}s each.</div></div>`;
+ }
+ return html;
+}
+
+function renderHistory(){
+ const dates=new Set([...Object.keys(state.sessions),...Object.keys(state.walks),...Object.keys(state.recovery)]);
+ const arr=[...dates].sort().reverse();
+ if(!arr.length) return `<div class="card"><div class="kicker">History</div><h2>No entries yet.</h2><p>Your walks, sessions, recovery days, RPE, and notes will appear here.</p></div>`;
+ let rows=arr.map(d=>{
+   const s=state.sessions[d], w=state.walks[d], r=state.recovery[d];
+   const tags=[s?.completedAt?"Workout":null,w?.completedAt?"Walk":null,r?"Recovery":null].filter(Boolean).map(x=>`<span class="chip done">${x}</span>`).join("");
+   return `<div class="item"><div class="row between"><div><strong>${pretty(d)}</strong><div class="meta">${programDay(d)>=1&&programDay(d)<=28?`Day ${programDay(d)} · Week ${weekForDate(d)}`:"Outside block"}</div></div><div class="row wrap">${tags}</div></div>
+   ${s?.rpe?`<div class="small" style="margin-top:8px">Session RPE: ${s.rpe}/10</div>`:""}
+   ${s?.notes?`<div class="small" style="margin-top:6px">${esc(s.notes)}</div>`:""}</div>`;
+ }).join("");
+ return `<div class="card"><div class="kicker">History</div><h2>Training log</h2></div><div class="list">${rows}</div>`;
+}
+
+function renderMetrics(){
+ const done=Object.values(state.sessions).filter(s=>s.completedAt).length;
+ const walks=Object.values(state.walks).filter(s=>s.completedAt).length;
+ const rec=Object.keys(state.recovery).length;
+ const weights=[...state.weights].sort((a,b)=>a.date.localeCompare(b.date));
+ let weightBlock=`<div class="card"><div class="row between"><div><div class="kicker">Weight trend</div><h3 style="margin:0">${weights.length?weights.at(-1).value+" lb":"No entries"}</h3></div><button class="chip" data-action="addWeight">+ Log weight</button></div>`;
+ if(weights.length){
+   const recent=weights.slice(-7), avg=recent.reduce((a,x)=>a+x.value,0)/recent.length;
+   weightBlock+=`<div class="small" style="margin-top:8px">${recent.length}-entry mean: ${avg.toFixed(1)} lb. Use trend, not a single day's water fluctuation, as the useful signal.</div>
+   <table><thead><tr><th>Date</th><th>Weight</th></tr></thead><tbody>${weights.slice(-8).reverse().map(x=>`<tr><td>${pretty(x.date)}</td><td>${x.value} lb</td></tr>`).join("")}</tbody></table>`;
+ }
+ weightBlock+=`</div>`;
+ return `
+ <div class="grid3">
+   <div class="stat"><strong>${done}</strong><span>Sessions</span></div>
+   <div class="stat"><strong>${walks}</strong><span>Walks</span></div>
+   <div class="stat"><strong>${rec}</strong><span>Recovery</span></div>
+ </div><div style="height:12px"></div>
+ ${weightBlock}
+ <div class="card"><div class="kicker">Interpretation</div><p class="small" style="margin:0">A sustainable downward weight trend plus stable/improving performance is more useful than trying to force the fastest possible weekly drop. If performance, recovery, mood, or sleep deteriorate sharply, the deficit or training load may be too aggressive.</p></div>`;
+}
+
+function renderSettings(){
+ return `<div class="card"><div class="kicker">Program</div><h2>Settings</h2>
+ <label class="small">Start date</label><input id="startDate" type="date" value="${state.startDate}">
+ <div style="height:12px"></div><div class="grid2"><div><label class="small">Walk minutes</label><input id="walkGoal" type="number" value="${state.walkGoal}" min="1"></div><div><label class="small">Walk speed (mph)</label><input id="walkSpeed" type="number" value="${state.walkSpeed}" min=".5" step=".1"></div></div>
+ </div>
+ <div class="card"><div class="kicker">Runner behavior</div>
+ <label class="toggle"><span>Audio cues</span><input type="checkbox" data-setting="sound" ${state.settings.sound?"checked":""}></label>
+ <label class="toggle"><span>Request screen wake lock</span><input type="checkbox" data-setting="wake" ${state.settings.wake?"checked":""}></label>
+ <label class="toggle"><span>Pre-session readiness check</span><input type="checkbox" data-setting="confirmSafety" ${state.settings.confirmSafety?"checked":""}></label>
+ <p class="small" style="margin:10px 0 0">Wake-lock support depends on the browser. Timers use absolute clock time, so they recover accurately after ordinary browser throttling.</p>
+ </div>
+ <div class="card"><div class="kicker">Data</div>
+ <button class="btn secondary" data-action="export">Export progress JSON</button><div style="height:8px"></div>
+ <button class="btn danger" data-action="reset">Reset all local data</button>
+ <p class="small" style="margin:10px 0 0">All progress is stored in this browser's local storage. No account or network connection is required.</p>
+ </div>`;
+}
+
+function openDay(day){
+ const date=addDays(state.startDate,day-1), w=Math.floor((day-1)/7)+1, g=phaseGoals[w], s=state.sessions[date], wa=state.walks[date], r=state.recovery[date];
+ showModal(`<div class="stepTop"><div><div class="kicker">${pretty(date)}</div><h2>Day ${day} · Week ${w}</h2></div><button class="chip" data-action="close">Close</button></div>
+ <div class="card tight"><strong>${g.title}</strong><div class="small">${g.goal}</div></div>
+ <div class="grid2">
+   <button class="btn ${wa?.completedAt?"secondary":""}" id="dayWalk">${wa?.completedAt?"Walk logged":"Start walk"}</button>
+   <button class="btn ${s?.completedAt?"secondary":""}" id="dayWorkout">${s?.completedAt?"Review / repeat":"Start workout"}</button>
+ </div>
+ ${r?`<div class="alert" style="margin-top:12px">Recovery day logged.</div>`:`<button class="btn ghost" style="margin-top:12px" id="dayRecovery">Log recovery day</button>`}
+ `);
+ document.getElementById("dayWalk").onclick=()=>openWalk(date);
+ document.getElementById("dayWorkout").onclick=()=>openReadiness(date);
+ const rr=document.getElementById("dayRecovery");if(rr)rr.onclick=()=>{state.recovery[date]={at:new Date().toISOString()};save();closeModal();render();};
+}
+
+function openReadiness(date, preview=false){
+ if(!state.settings.confirmSafety){startWorkout(date,preview);return;}
+ showModal(`<div class="kicker">Before the timer starts</div><h2>Readiness check</h2>
+ <div class="alert danger">If any warning symptom is present, this app should not be used to push through it.</div>
+ <label class="toggle"><span>No chest pain, fainting, severe dizziness, unusual shortness of breath, or fast/irregular heartbeat.</span><input id="safe1" type="checkbox"></label>
+ <label class="toggle"><span>I am not acutely intoxicated and have not taken more medication than prescribed.</span><input id="safe2" type="checkbox"></label>
+ <label class="toggle"><span>I can move with normal coordination and control today.</span><input id="safe3" type="checkbox"></label>
+ <p class="small">Significant sleep loss, illness, unusual pain, or poor recovery are legitimate reasons to choose a recovery day instead of escalating intensity.</p>
+ <button class="btn" id="readyGo" disabled>${preview?"Preview session":"Begin session"}</button>
+ <div style="height:8px"></div><button class="btn ghost" data-action="close">Cancel</button>`);
+ const checks=["safe1","safe2","safe3"].map(id=>document.getElementById(id));
+ const go=document.getElementById("readyGo");
+ checks.forEach(c=>c.onchange=()=>go.disabled=!checks.every(x=>x.checked));
+ go.onclick=()=>startWorkout(date,preview);
+}
+
+function buildSequence(week){
+ const seq=[];
+ phase1.forEach((x,i)=>seq.push({id:`p1-${i}`,phase:"PHASE I",type:"reps",name:x.name,target:x.target,reps:x.reps,cue:x.cue}));
+ if(week===1){
+   moves.forEach((m,i)=>{
+     if(m.w1secs) seq.push({id:`p2-${i}`,phase:"PHASE II",type:"timer",name:m.name,target:m.w1,cue:m.cue,seconds:m.w1secs});
+     else seq.push({id:`p2-${i}`,phase:"PHASE II",type:"reps",name:m.name,target:m.w1,reps:m.w1reps,cue:m.cue});
+     if(i<moves.length-1) seq.push({id:`rest-${i}`,phase:"PHASE II",type:"timer",name:"Recovery",target:"90 seconds",cue:"Breathe normally. Let heart rate settle before the next movement.",seconds:90,isRest:true});
+   });
+ } else if(week===2){
+   moves.forEach((m,i)=>{
+     const wk2 = {
+       "Burpees":"Slow, steady pace.",
+       "Prisoner Squats":"Constant tension.",
+       "Pushups":"Form over reps.",
+       "Mountain Climbers":"Moderate pace.",
+       "Push-Up Holds":"Use a 2-second pause.",
+       "Reverse Lunges":"Steady cadence.",
+       "Crunches":"Controlled.",
+       "Wall Sit":"Hold the full 30 seconds.",
+       "Shoulder Presses":"Maximum deliberate muscular tension; do not sacrifice joint position.",
+       "Squats":"Focused verticality."
+     }[m.name];
+     seq.push({id:`p2-work-${i}`,phase:"PHASE II",type:"timer",name:m.name,target:"30 seconds work",cue:m.cue+" "+wk2,seconds:30});
+     seq.push({id:`p2-rest-${i}`,phase:"PHASE II",type:"timer",name:"Rest",target:"30 seconds",cue:`Recover before ${moves[(i+1)%moves.length]?.name||"the next phase"}.`,seconds:30,isRest:true});
+   });
+ } else {
+   moves.forEach((m,i)=>{
+     seq.push({
+       id:`p2-emom-${i}`,phase:"PHASE II",type:"emom",name:m.name,target:m.w3,cue:m.cue,
+       seconds:60,activeSeconds:m.w3secs||null,reps:m.w3reps||null,
+       recovery:week===4?"Combat Crouch":"Rest"
+     });
+   });
+ }
+ const holdSeconds=phaseGoals[week].hold;
+ holds.forEach((h,i)=>seq.push({id:`p3-${i}`,phase:"PHASE III",type:"timer",name:h.name,target:`${holdSeconds} seconds`,cue:h.cue,seconds:holdSeconds,isHold:true}));
+ return seq;
+}
+
+function startWorkout(date,preview=false){
+ const w=Math.min(4,Math.max(1,weekForDate(date)||1));
+ activeSessionDate=preview?null:date;
+ sequence=buildSequence(w);
+ stepIndex=0;
+ if(!preview){
+   const s=sessionFor(date); if(!s.startedAt)s.startedAt=new Date().toISOString(); s.week=w; save();
+ }
+ modalMode="workout"; keepAwake(); renderWorkoutStep();
+}
+
+function renderWorkoutStep(){
+ clearTimer();
+ const step=sequence[stepIndex];
+ if(!step){finishWorkout();return;}
+ const sess=activeSessionDate?sessionFor(activeSessionDate):null;
+ const prior=sess?.steps?.[step.id];
+ const isDone=!!prior?.done;
+ const base=`<div class="stepTop"><div class="stepCount">STEP ${stepIndex+1} / ${sequence.length} · ${step.phase}</div><button class="chip" id="exitWorkout">Exit</button></div>
+ <div class="progress"><i style="width:${pct(stepIndex,sequence.length)}%"></i></div><div style="height:18px"></div>
+ <div class="kicker">${step.isRest?"Recovery":step.phase}</div><div class="heroMove">${esc(step.name)}</div><div class="target">${esc(step.target)}</div>
+ <div class="instruction">${esc(step.cue)}</div><hr>`;
+ if(step.type==="reps"){
+   let actual=prior?.actual??step.reps??0;
+   showModal(base+`<div class="repbox"><button id="minus">−</button><strong id="actual">${actual}</strong><button id="plus">+</button></div>
+   <div class="small" style="text-align:center;margin-bottom:12px">Actual reps completed</div>
+   <button class="btn" id="doneStep">${isDone?"Next":"Complete movement"}</button>
+   <div style="height:8px"></div><button class="btn ghost" id="skipStep">Skip / stop for pain</button>`);
+   const a=document.getElementById("actual");
+   document.getElementById("minus").onclick=()=>{actual=Math.max(0,actual-1);a.textContent=actual};
+   document.getElementById("plus").onclick=()=>{actual++;a.textContent=actual};
+   document.getElementById("doneStep").onclick=()=>completeStep(step,{actual});
+   document.getElementById("skipStep").onclick=()=>skipStep(step);
+ } else if(step.type==="timer"){
+   showModal(base+timerHTML(step.seconds)+`<button class="btn" id="timerMain">Start timer</button>
+   <div style="height:8px"></div><button class="btn ghost" id="skipStep">Skip / stop</button>`);
+   setupCountdown(step.seconds,()=>completeStep(step,{actualSeconds:step.seconds}), step);
+   document.getElementById("skipStep").onclick=()=>skipStep(step);
+ } else if(step.type==="emom"){
+   let actual=prior?.actual??step.reps??0;
+   const repControls=step.reps?`<div class="repbox"><button id="minus">−</button><strong id="actual">${actual}</strong><button id="plus">+</button></div><div class="small" style="text-align:center">Actual reps</div>`:"";
+   showModal(base+timerHTML(60)+`<div id="emomState" class="alert" style="margin-bottom:12px">WORK · complete ${esc(step.target)}.</div>${repControls}
+   ${step.activeSeconds?"":`<button class="btn secondary" id="repsDone">Reps complete → ${step.recovery}</button><div style="height:8px"></div>`}
+   <button class="btn" id="timerMain">Start minute</button>
+   <div style="height:8px"></div><button class="btn ghost" id="skipStep">Skip / stop</button>`);
+   if(step.reps){
+     const a=document.getElementById("actual");
+     document.getElementById("minus").onclick=()=>{actual=Math.max(0,actual-1);a.textContent=actual};
+     document.getElementById("plus").onclick=()=>{actual++;a.textContent=actual};
+   }
+   let switched=false;
+   const switchRecovery=()=>{
+     if(switched)return; switched=true;
+     const box=document.getElementById("emomState"); if(box){box.textContent=`${step.recovery.toUpperCase()} · continue until the minute ends.`;box.classList.remove("danger");}
+     beep(520,.08);
+   };
+   const rd=document.getElementById("repsDone"); if(rd) rd.onclick=switchRecovery;
+   setupCountdown(60,()=>completeStep(step,{actual:step.reps?actual:null,actualSeconds:step.activeSeconds||null}),step,(elapsed)=>{
+      if(step.activeSeconds && elapsed>=step.activeSeconds) switchRecovery();
+   });
+   document.getElementById("skipStep").onclick=()=>skipStep(step);
+ }
+ document.getElementById("exitWorkout").onclick=()=>exitWorkout();
+}
+function timerHTML(sec){return `<div class="timerWrap"><div class="timer" id="timerDisplay">${fmt(sec)}</div><div class="timerLabel" id="timerLabel">Ready</div></div>`;}
+function fmt(s){s=Math.max(0,Math.ceil(s));return `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;}
+
+function setupCountdown(seconds,onEnd,step,onTickExtra){
+ let running=false, paused=false, end=0, remaining=seconds, int=null, elapsedBase=0;
+ const disp=document.getElementById("timerDisplay"), label=document.getElementById("timerLabel"), btn=document.getElementById("timerMain");
+ function tick(){
+   if(!running||paused)return;
+   remaining=Math.max(0,(end-Date.now())/1000);
+   const elapsed=seconds-remaining;
+   if(disp)disp.textContent=fmt(remaining);
+   if(label)label.textContent=step.type==="emom"?"Minute in progress":step.isRest?"Recovery":"Work";
+   if(onTickExtra)onTickExtra(elapsed);
+   if(remaining<=0){
+     clearInterval(int);running=false;beep(880,.15);setTimeout(()=>beep(1040,.12),140);
+     if(disp)disp.textContent="00:00";if(label)label.textContent="Complete";
+     setTimeout(onEnd,350);
+   }
+ }
+ btn.onclick=()=>{
+   if(!running){
+     running=true;paused=false;end=Date.now()+remaining*1000;int=setInterval(tick,125);btn.textContent="Pause";tick();
+   }else if(!paused){
+     paused=true;remaining=Math.max(0,(end-Date.now())/1000);clearInterval(int);btn.textContent="Resume";if(label)label.textContent="Paused";
+   }else{
+     paused=false;end=Date.now()+remaining*1000;int=setInterval(tick,125);btn.textContent="Pause";tick();
+   }
+ };
+ timer={stop:()=>clearInterval(int)};
+}
+function clearTimer(){if(timer){timer.stop();timer=null;}}
+function completeStep(step,data={}){
+ if(activeSessionDate){
+   const s=sessionFor(activeSessionDate);
+   s.steps[step.id]=Object.assign({done:true,completedAt:new Date().toISOString()},data);
+   save();
+ }
+ stepIndex++;renderWorkoutStep();
+}
+function skipStep(step){
+ if(activeSessionDate){
+   const s=sessionFor(activeSessionDate);s.steps[step.id]={done:false,skipped:true,at:new Date().toISOString()};save();
+ }
+ stepIndex++;renderWorkoutStep();
+}
+function exitWorkout(){
+ clearTimer();releaseWake();closeModal();render();
+}
+function finishWorkout(){
+ clearTimer();releaseWake();
+ if(activeSessionDate){
+   const s=sessionFor(activeSessionDate);s.completedAt=new Date().toISOString();save();
+ }
+ showModal(`<div class="kicker">Session complete</div><h2>Block finished.</h2><p>Record effort and anything that should change tomorrow. Pain is not a performance metric.</p>
+ <label class="small">Session RPE (1–10)</label><input id="rpe" type="number" min="1" max="10" placeholder="e.g. 6">
+ <div style="height:10px"></div><label class="small">Notes</label><textarea id="notes" placeholder="Breathing, soreness, technique, anything unusual…"></textarea>
+ <div style="height:12px"></div><button class="btn" id="saveFinish">Save & close</button>`);
+ document.getElementById("saveFinish").onclick=()=>{
+   if(activeSessionDate){
+     const s=sessionFor(activeSessionDate); const r=+document.getElementById("rpe").value;
+     s.rpe=(r>=1&&r<=10)?r:null;s.notes=document.getElementById("notes").value.trim();save();
+   }
+   closeModal();render();
+ };
+}
+
+function openWalk(date){
+ const existing=state.walks[date];
+ showModal(`<div class="stepTop"><div><div class="kicker">${pretty(date)}</div><h2>Walking pad</h2></div><button class="chip" data-action="close">Close</button></div>
+ <div class="heroMove">${state.walkGoal} minutes</div><div class="target">${state.walkSpeed} mph target</div>
+ <p class="instruction">Use a pace that remains coordinated and sustainable. The speed target is not worth overriding pain, dizziness, or abnormal cardiovascular symptoms.</p>
+ ${timerHTML(state.walkGoal*60)}
+ <button class="btn" id="timerMain">${existing?.completedAt?"Repeat walk":"Start walk"}</button>
+ <div style="height:8px"></div><button class="btn secondary" id="walkManual">Mark complete manually</button>`);
+ keepAwake();
+ const complete=()=>{state.walks[date]={completedAt:new Date().toISOString(),actualMinutes:state.walkGoal,speed:state.walkSpeed};save();releaseWake();beep();closeModal();render();};
+ setupCountdown(state.walkGoal*60,complete,{name:"Walk",type:"walk"});
+ document.getElementById("walkManual").onclick=complete;
+}
+
+function openWeight(){
+ showModal(`<div class="kicker">Optional metric</div><h2>Log body weight</h2><label class="small">Date</label><input id="weightDate" type="date" value="${today()}"><div style="height:10px"></div>
+ <label class="small">Weight (lb)</label><input id="weightValue" type="number" inputmode="decimal" step=".1" placeholder="0.0">
+ <div style="height:12px"></div><button class="btn" id="saveWeight">Save entry</button><div style="height:8px"></div><button class="btn ghost" data-action="close">Cancel</button>`);
+ document.getElementById("saveWeight").onclick=()=>{
+   const date=document.getElementById("weightDate").value, value=+document.getElementById("weightValue").value;
+   if(!date||!value||value<50||value>800){alert("Enter a valid date and weight.");return;}
+   state.weights=state.weights.filter(x=>x.date!==date);state.weights.push({date,value});save();closeModal();render();
+ };
+}
+
+function showModal(html){
+ clearTimer();document.getElementById("sheet").innerHTML=html;document.getElementById("modal").classList.add("show");
+ document.querySelectorAll("#sheet [data-action]").forEach(b=>b.addEventListener("click",()=>handle(b.dataset.action,b.dataset.arg)));
+}
+function closeModal(){clearTimer();releaseWake();document.getElementById("modal").classList.remove("show");modalMode=null;}
+document.getElementById("modal").addEventListener("click",e=>{if(e.target.id==="modal"&&modalMode!=="workout")closeModal();});
+
+function exportData(){
+ const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+ const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="foundation28-progress.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function resetData(){
+ if(confirm("Erase all FOUNDATION / 28 progress stored in this browser?")){
+   localStorage.removeItem(STORE);state=defaultState();render();
+ }
+}
+
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+  navigator.serviceWorker.register("./sw.js").catch(()=>{});
+}
+render();
+</script>
+</body>
+</html>
