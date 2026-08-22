@@ -1,0 +1,22 @@
+FOUNDATION / 28 v2.0.0
+
+Major release
+- Modularized program definition, runner engine, storage, audio and chart code.
+- Added program pause/resume with frozen current day.
+- Added user-defined injury/limitation records and movement-tag restrictions.
+- Added readiness scoring with green/yellow/red training recommendation.
+- Added restriction-filtered recovery sessions that do not advance the main program.
+- Added 3-2-1 countdowns, tones, spoken cues, 10-second cue and end cues.
+- Added session preview and duration estimate.
+- Added automatic session timing with active/recovery/other breakdown.
+- Added stable exercise IDs and performance history.
+- Added pain/issue logging with body area, side, intensity, type and exercise link.
+- Added body-weight trend graph and trailing seven-calendar-day average.
+- Added validated JSON backup/restore and v1 local-data migration.
+- Added true-black AMOLED structural surfaces.
+- Added session-RPE training-load graph.
+- Added PWA icons, service-worker versioning, offline asset caching and navigation network-first update behavior.
+- Added partial-walk logging and restriction warning for foot-loading.
+
+Data schema: 2
+App version: 2.0.0

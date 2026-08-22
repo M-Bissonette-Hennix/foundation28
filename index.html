@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="color-scheme" content="dark">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Foundation 28">
+  <meta name="description" content="A private four-week training and recovery instrument.">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+  <link rel="icon" href="./icons/icon-192.png" sizes="192x192">
+  <link rel="stylesheet" href="./styles.css">
+  <title>FOUNDATION / 28</title>
+</head>
+<body>
+  <div id="appShell" class="app-shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">Private training instrument</div>
+        <h1>FOUNDATION / 28</h1>
+      </div>
+      <div class="topbar-meta" id="topbarMeta"></div>
+    </header>
+
+    <main id="app" class="app-content" aria-live="polite"></main>
+  </div>
+
+  <nav class="bottom-nav" aria-label="Primary">
+    <button class="nav-button active" data-view="today"><span class="nav-icon">●</span><span>Today</span></button>
+    <button class="nav-button" data-view="program"><span class="nav-icon">▦</span><span>Program</span></button>
+    <button class="nav-button" data-view="recovery"><span class="nav-icon">◇</span><span>Recovery</span></button>
+    <button class="nav-button" data-view="metrics"><span class="nav-icon">↗</span><span>Metrics</span></button>
+    <button class="nav-button" data-view="settings"><span class="nav-icon">⚙</span><span>Settings</span></button>
+  </nav>
+
+  <div id="modal" class="modal" aria-hidden="true">
+    <div id="sheet" class="sheet" role="dialog" aria-modal="true"></div>
+  </div>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

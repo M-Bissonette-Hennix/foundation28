@@ -1,0 +1,25 @@
+FOUNDATION / 28 v2.0.0 — RELEASE VALIDATION
+2026-08-22
+
+PASS — JavaScript syntax: app.js, engine.js, data-store.js, audio.js, charts.js, program-registry.js, foundation28.js, sw.js
+PASS — Minimal DOM boot: app module initializes without a top-level runtime exception under a browser-like stub
+PASS — ES module import paths: all relative imports resolve to files in the package
+PASS — 28-day program invariants: every day builds, week mapping is correct, step IDs are unique, targets/types are valid, exercise IDs resolve
+PASS — Week structure spot checks: Weeks 1, 2, 3 and 4 produce expected distinct timing architectures
+PASS — Pause/resume: current program day remains frozen while paused
+PASS — Advancement guard: a completed session advances once; duplicate processing of the same session cannot advance twice
+PASS — Restriction matching: exercise movement tags intersect active blocked tags correctly
+PASS — Recovery filtering: recovery movements with blocked tags are removed
+PASS — Readiness: high-pain / hard-red condition overrides otherwise adequate score
+PASS — Weight analytics: trailing seven-calendar-day mean behaves correctly across gaps in weigh-ins
+PASS — Training load: session duration (minutes) × session RPE calculation verified
+PASS — v1 local-data migration: settings, weights, sessions and walks migrate into schema 2
+PASS — JSON backup / restore: round-trip restores program progress and metric data
+PASS — PWA manifest: valid JSON, black background/theme, icon declarations present
+PASS — Service-worker asset coverage: every pre-cached asset exists
+PASS — index.html parsing: no duplicate static IDs
+PASS — AMOLED structural palette: background and primary structural surfaces are #000000
+PASS — Release archive contains root-level GitHub Pages files and preserved js/, js/programs/, icons/ directories
+
+LIMITATION
+No full WebKit/iOS Safari automation runtime was available in the build environment. Browser-specific APIs (Wake Lock, Web Speech, service-worker behavior) are feature-detected and degrade gracefully, but final on-device Safari interaction remains the appropriate acceptance test.
