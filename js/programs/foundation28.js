@@ -180,8 +180,8 @@ function buildRecoverySession(blockedTags=[]) {
 }
 
 export const foundation28Program = {
-  id:'foundation28', version:'2.0.0', name:'FOUNDATION / 28', durationDays:28,
-  description:'Four-week return-to-training calisthenics progression.',
+  id:'foundation28', version:'2.1.0', name:'RETURN / 28', durationDays:28,
+  description:'Twenty-eight-session graded return-to-training calisthenics progression.',
   weekGoals, exercises:Object.fromEntries(Object.values(exercises).map(e=>[e.id,e])),
   buildSession, buildRecoverySession
 };
