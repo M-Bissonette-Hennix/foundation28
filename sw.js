@@ -1,4 +1,4 @@
-const CACHE = 'foundation28-v2.2.0-adaptive-control-cache-1';
+const CACHE = 'threshold-v2.3.0-first-motion-cache-1';
 const CORE = [
   './',
   './index.html',
@@ -8,6 +8,7 @@ const CORE = [
   './js/program-registry.js',
   './js/training-coordinator.js',
   './js/training-report.js',
+  './js/first-motion.js',
   './js/data-store.js',
   './js/engine.js',
   './js/audio.js',
