@@ -12,6 +12,10 @@ import {
   collisionAnalysis, definitionVolume, muscleVolumeWindow, loadWindowAnalytics, commandCenterSummary
 } from './training-coordinator.js';
 import { downloadTrainingReport } from './training-report.js';
+import {
+  buildFirstMotionPlan, beginFirstMotionAttempt, todayFirstMotionAttempt, markFirstMotionStep,
+  finishFirstMotionAttempt, firstMotionStats, resetFirstMotionRamp, estimateFirstMotionSeconds
+} from './first-motion.js';
 
 let state = loadState();
 let program = getProgram(state.activeProgramId);
@@ -20,6 +24,7 @@ let runner = null;
 let timerController = null;
 let wakeLock = null;
 let readinessContinuation = null;
+let firstMotionRun = null;
 
 const app = document.getElementById('app');
 const modal = document.getElementById('modal');
@@ -142,6 +147,27 @@ function fmtChange(v){return v===null||!Number.isFinite(Number(v))?'No prior win
 function returnStageChip(injury){const info=returnStageInfo(injury.returnStage);return `<span class="chip ${Number(injury.returnStage)===0?'bad':Number(injury.returnStage)<4?'warn':'good'}">${esc(info.short)}</span>`;}
 function collisionClass(sev){return sev==='high'?'bad':sev==='moderate'?'warn':sev==='low'?'warn':'';}
 function collisionLabel(sev){return sev==='none'?'No meaningful overlap':`${sev.toUpperCase()} overlap`;}
+function firstMotionPlanForToday(){
+  const blocked=activeBlockedTags();
+  const recovery=program.buildRecoverySession(blocked);
+  const raw=state.programState.status==='active'&&!completedProgramToday()?program.buildSession(currentDay()):recovery;
+  const definition=state.programState.status==='active'&&!completedProgramToday()?materializeDefinition(raw,'program','full'):raw;
+  const fmForPlan=state.settings.firstMotionAdaptiveEntry?state.firstMotion:{...state.firstMotion,level:0};
+  return buildFirstMotionPlan({definition,recoveryDefinition:recovery,blockedTags:blocked,firstMotion:fmForPlan});
+}
+function todayFirstMotion(){return todayFirstMotionAttempt(state.firstMotion,today());}
+function renderFirstMotionCard(){
+  if(!state.settings.firstMotionEnabled)return '';
+  const attempt=todayFirstMotion(), stats=firstMotionStats(state.firstMotion,{days:14,endDate:today()}), unfinished=incompleteSession('program',currentDay());
+  if(completedProgramToday())return `<div class="card good"><div class="kicker">First Motion</div><h2>Threshold crossed.</h2><p class="small">RETURN / 28 is already complete for today.</p></div>`;
+  if(unfinished)return `<div class="card good"><div class="kicker">First Motion</div><h2>You already started.</h2><p>The initiation barrier is behind you. Resume the session rather than negotiating with the whole workout again.</p><button class="btn good" data-action="startWorkout">Resume RETURN / 28</button></div>`;
+  if(attempt?.minimumCompletedAt){
+    return `<div class="card good"><div class="row between"><div><div class="kicker">First Motion</div><h2>Threshold crossed today.</h2></div><span class="chip good">MINIMUM DONE</span></div><p>You already completed the honest minimum. Nothing else is owed.</p>${state.programState.status==='active'?`<button class="btn secondary" data-action="preview">Start RETURN / 28 if you want</button>`:''}<div class="small" style="margin-top:10px">Last 14 days: ${stats.thresholdCrossings} threshold crossing${stats.thresholdCrossings===1?'':'s'} · ${stats.continued} continued beyond the minimum.</div></div>`;
+  }
+  const resume=attempt&&!attempt.endedAt;
+  return `<div class="card"><div class="row between"><div><div class="kicker">Low-friction entry</div><h2>FIRST MOTION</h2></div><span class="chip">NO COMMITMENT</span></div><p><strong>One tiny physical action.</strong> You may stop immediately afterward and it still counts as success.</p><button class="btn" data-action="firstMotion">${resume?'Resume First Motion':'I CAN’T START — GIVE ME THE MINIMUM'}</button><div class="small" style="margin-top:10px">Start rule: ${esc(state.firstMotion?.startRule||'Open THRESHOLD and press FIRST MOTION when avoidance appears.')}</div></div>`;
+}
+
 function renderCommandCenter(){
   if(!state.settings.commandCenter)return '';
   const ready=latestReadiness(state,today()), items=todayCoordinationItems(), collision=currentCollision(), load=loadWindowAnalytics(state), walkDone=completedWalkToday();
@@ -150,7 +176,7 @@ function renderCommandCenter(){
   const returns=activeInjuries(state).filter(i=>Number(i.returnStage)>0);
   let recommendation='Train according to the displayed prescriptions.';
   if(ready?.band==='red')recommendation='Recovery is the preferred training mode from today’s readiness entry.';
-  else if(collision.severity==='high')recommendation='Preserve FOUNDATION / 28 as the priority session and use the reduced add-on recommendation if training both.';
+  else if(collision.severity==='high')recommendation='Preserve RETURN / 28 as the priority session and use the reduced add-on recommendation if training both.';
   else if(collision.severity==='moderate')recommendation='Same-day overlap is material; the add-on preview will offer a conservative scaled version.';
   else if(load.previous7>0&&load.current7>=load.previous7*1.5)recommendation='Recent 7-day load rose sharply; adaptive previews will bias toward lower volume / longer recovery.';
   return `<div class="card ${ready?.band==='red'?'bad':collisionClass(collision.severity)}">
@@ -161,7 +187,7 @@ function renderCommandCenter(){
       <div class="stat"><strong>${collision.score.toFixed(1)}</strong><span>${esc(collisionLabel(collision.severity))}</span></div>
       <div class="stat"><strong>${returns.length}</strong><span>Return progressions</span></div>
     </div>
-    <div class="section-title">Today’s blocks</div><div class="list">${items.map(x=>`<div class="list-item"><div class="row between"><div><strong>${esc(x.name)}</strong><div class="small">${x.kind==='program'?`FOUNDATION Day ${x.status==='completed'?(completedProgramToday()?.programDay??'—'):currentDay()}`:'Monday / Wednesday / Friday add-on'}</div></div><span class="chip ${x.status==='completed'?'good':'warn'}">${x.status==='completed'?'DONE':'PENDING'}</span></div></div>`).join('')}<div class="list-item"><div class="row between"><div><strong>Walking pad</strong><div class="small">${state.settings.walkGoalMinutes} min · ${state.settings.walkSpeedMph} mph</div></div><span class="chip ${walkDone?'good':'warn'}">${walkDone?'DONE':'PENDING'}</span></div></div></div>
+    <div class="section-title">Today’s blocks</div><div class="list">${items.map(x=>`<div class="list-item"><div class="row between"><div><strong>${esc(x.name)}</strong><div class="small">${x.kind==='program'?`RETURN Day ${x.status==='completed'?(completedProgramToday()?.programDay??'—'):currentDay()}`:'Monday / Wednesday / Friday add-on'}</div></div><span class="chip ${x.status==='completed'?'good':'warn'}">${x.status==='completed'?'DONE':'PENDING'}</span></div></div>`).join('')}<div class="list-item"><div class="row between"><div><strong>Walking pad</strong><div class="small">${state.settings.walkGoalMinutes} min · ${state.settings.walkSpeedMph} mph</div></div><span class="chip ${walkDone?'good':'warn'}">${walkDone?'DONE':'PENDING'}</span></div></div></div>
     ${collision.topMuscles.length?`<div class="alert ${collisionClass(collision.severity)}" style="margin-top:12px"><strong>Overlap:</strong> ${collision.topMuscles.map(esc).join(', ')}.</div>`:''}
     <div class="alert" style="margin-top:12px"><strong>Recommendation:</strong> ${esc(recommendation)}</div>
   </div>`;
@@ -224,7 +250,7 @@ function handleAction(action,arg){
     startRecovery:()=>openRecoveryPreview(), injuries:()=>openInjuryManager(), pain:()=>openPainLog(), walk:()=>openWalk(),
     pause:()=>openPause(), resume:()=>doResume(), addWeight:()=>openWeight(), exerciseHistory:()=>openExerciseHistory(arg),
     export:()=>downloadBackup(state), import:()=>$('#importFile')?.click(), reset:()=>resetData(), update:()=>forceUpdate(),
-    close:()=>closeModal(), dayPreview:()=>openSessionPreview(Number(arg)), history:()=>openSessionHistory(), resolveInjury:()=>resolveInjury(arg), injuryAdvance:()=>changeInjuryStage(arg,1), injuryRegress:()=>changeInjuryStage(arg,-1), supplementalPreview:()=>openSupplementalPreview(arg), supplementalStart:()=>requestSupplementalStart(arg), toggleSupplemental:()=>toggleSupplemental(arg), report:()=>{const [days,format]=String(arg||'28:json').split(':');downloadTrainingReport(state,{days:Number(days)||28,format:format||'json',endDate:today()});}
+    close:()=>closeModal(), dayPreview:()=>openSessionPreview(Number(arg)), history:()=>openSessionHistory(), resolveInjury:()=>resolveInjury(arg), injuryAdvance:()=>changeInjuryStage(arg,1), injuryRegress:()=>changeInjuryStage(arg,-1), supplementalPreview:()=>openSupplementalPreview(arg), supplementalStart:()=>requestSupplementalStart(arg), toggleSupplemental:()=>toggleSupplemental(arg), firstMotion:()=>openFirstMotion(), resetFirstMotion:()=>resetFirstMotionCalibration(), report:()=>{const [days,format]=String(arg||'28:json').split(':');downloadTrainingReport(state,{days:Number(days)||28,format:format||'json',endDate:today()});}
   };
   map[action]?.();
 }
@@ -292,16 +318,17 @@ function renderToday(){
   const lastSession=[...state.sessions].filter(s=>s.completedAt).sort((a,b)=>String(b.completedAt).localeCompare(String(a.completedAt)))[0];
 
   return `
+    ${renderFirstMotionCard()}
     ${renderCommandCenter()}
     ${ps.status==='paused'?`<div class="card warn"><div class="row between"><div><div class="kicker">Program paused</div><h2>Day ${day} is frozen.</h2><p>${esc(ps.pauseReason||'No reason recorded.')}</p></div>${statusChip()}</div><button class="btn good" data-action="resume">Resume program</button></div>`:''}
-    ${ps.status==='completed'?`<div class="card good"><div class="kicker">Program complete</div><h2>FOUNDATION / 28 finished.</h2><p>Your full history remains available below and in Metrics.</p></div>`:''}
+    ${ps.status==='completed'?`<div class="card good"><div class="kicker">Program complete</div><h2>RETURN / 28 finished.</h2><p>Your full history remains available below and in Metrics.</p></div>`:''}
     <div class="card">
       <div class="row between"><div><div class="kicker">${ps.status==='paused'?'Frozen':'Current prescription'}</div><h2>Day ${day} · Week ${week}</h2></div>${statusChip()}</div>
       <h3>${esc(goal.title)}</h3><p>${esc(goal.goal)}</p>
       <div class="progress"><i style="width:${completion.percent}%"></i></div>
       <div class="small" style="margin-top:8px">${completion.completed} of ${program.durationDays} program sessions completed · ${completion.percent}%</div>
       <div class="spacer12"></div>
-      ${primaryDoneToday?`<div class="alert good">FOUNDATION / 28 is complete for today. Day ${day} is the next prescription and becomes startable on the next calendar day.</div>`:`<button class="btn ${unfinished?'good':''}" data-action="${unfinished?'startWorkout':'preview'}" ${ps.status!=='active'?'disabled':''}>${unfinished?'Resume unfinished session':'Preview today’s session'}</button>`}
+      ${primaryDoneToday?`<div class="alert good">RETURN / 28 is complete for today. Day ${day} is the next prescription and becomes startable on the next calendar day.</div>`:`<button class="btn ${unfinished?'good':''}" data-action="${unfinished?'startWorkout':'preview'}" ${ps.status!=='active'?'disabled':''}>${unfinished?'Resume unfinished session':'Preview today’s session'}</button>`}
     </div>
 
     <div class="grid2">
@@ -394,14 +421,18 @@ function renderMetrics(){
   const recentSessions=[...completed].sort((a,b)=>String(b.completedAt).localeCompare(String(a.completedAt))).slice(0,8);
   const muscleRows=Object.keys({...volume28,...volume7}).sort((a,b)=>(volume7[b]||0)-(volume7[a]||0));
   const maxMuscle=Math.max(1,...muscleRows.map(m=>Math.max(volume7[m]||0,volume28[m]||0)));
+  const fm14=firstMotionStats(state.firstMotion,{days:14,endDate:today()});
+  const fm28=firstMotionStats(state.firstMotion,{days:28,endDate:today()});
 
   return `
     <div class="grid2">
-      <div class="stat"><strong>${programSessions.length}</strong><span>Foundation sessions</span></div>
+      <div class="stat"><strong>${programSessions.length}</strong><span>Return sessions</span></div>
       <div class="stat"><strong>${supplementalSessions.length}</strong><span>Arm add-on sessions</span></div>
       <div class="stat"><strong>${recoverySessions.length}</strong><span>Recovery sessions</span></div>
       <div class="stat"><strong>${totalMinutes}</strong><span>Logged minutes</span></div>
     </div><div class="spacer12"></div>
+
+    <div class="card"><div class="kicker">Initiation reliability</div><h2>First Motion</h2><p class="small">This tracks starting behavior separately from full-workout completion. A threshold crossing means the honest minimum was completed.</p><div class="grid2"><div class="stat"><strong>${fm14.thresholdCrossings}</strong><span>14-day crossings</span></div><div class="stat"><strong>${fm14.continued}</strong><span>14-day continuations</span></div><div class="stat"><strong>${fm28.thresholdCrossings}</strong><span>28-day crossings</span></div><div class="stat"><strong>${fm28.handoffs}</strong><span>28-day RETURN handoffs</span></div></div></div>
 
     <div class="card"><div class="kicker">7 / 28-day workload</div><h2>Training-load windows</h2><p class="small">Completed-session load = duration in minutes × session RPE. Windows are descriptive workload totals, not injury-risk thresholds.</p>
       <div class="grid2"><div class="stat"><strong>${load.current7}</strong><span>Last 7 days</span></div><div class="stat"><strong>${load.previous7}</strong><span>Previous 7 · ${esc(fmtChange(load.change7))}</span></div><div class="stat"><strong>${load.current28}</strong><span>Last 28 days</span></div><div class="stat"><strong>${load.previous28}</strong><span>Previous 28 · ${esc(fmtChange(load.change28))}</span></div></div>
@@ -421,7 +452,7 @@ function renderMetrics(){
 
     <div class="card"><div class="kicker">Exercise-specific history</div><h2>Performance ledger</h2><div class="field"><label for="exerciseSelect">Exercise</label><select id="exerciseSelect"><option value="">Choose an exercise…</option>${exerciseOptions.map(e=>`<option value="${esc(e.id)}">${esc(e.name)}</option>`).join('')}</select></div><button class="btn secondary" id="openExerciseHistory" disabled>Open history</button></div>
 
-    <div class="card"><div class="kicker">Exportable training report</div><h2>Portable analysis packet</h2><p class="small">Exports completed sessions, readiness, pain, injuries, walking, weight, workload windows, and muscle-group set-equivalents for external review or archival use.</p><div class="grid2"><button class="btn secondary" data-action="report" data-arg="7:json">7-day JSON</button><button class="btn secondary" data-action="report" data-arg="28:json">28-day JSON</button><button class="btn ghost" data-action="report" data-arg="7:csv">7-day CSV</button><button class="btn ghost" data-action="report" data-arg="28:csv">28-day CSV</button></div></div>
+    <div class="card"><div class="kicker">Exportable training report</div><h2>Portable analysis packet</h2><p class="small">Exports completed sessions, First Motion entries, readiness, pain, injuries, walking, weight, workload windows, and muscle-group set-equivalents for external review or archival use.</p><div class="grid2"><button class="btn secondary" data-action="report" data-arg="7:json">7-day JSON</button><button class="btn secondary" data-action="report" data-arg="28:json">28-day JSON</button><button class="btn ghost" data-action="report" data-arg="7:csv">7-day CSV</button><button class="btn ghost" data-action="report" data-arg="28:csv">28-day CSV</button></div></div>
 
     <div class="card"><div class="row between"><div><div class="kicker">Recent session timing</div><h3>Automatic duration records</h3></div><button class="chip" data-action="history">All sessions</button></div>${recentSessions.length?`<div class="table-wrap"><table><thead><tr><th>Date</th><th>Session</th><th>Duration</th><th>RPE</th><th>Load</th></tr></thead><tbody>${recentSessions.map(s=>`<tr><td>${prettyDate(s.date)}</td><td>${esc(sessionDisplayName(s))}</td><td>${secondsFmt(s.totalSeconds||0)}</td><td>${s.rpe??'—'}</td><td>${s.trainingLoad??'—'}</td></tr>`).join('')}</tbody></table></div>`:`<p class="small">No completed sessions yet.</p>`}</div>
   `;
@@ -429,7 +460,7 @@ function renderMetrics(){
 
 function renderSettings(){
   return `
-    <div class="card"><div class="kicker">Application</div><h2>FOUNDATION / 28</h2><div class="row wrap"><span class="chip">App ${APP_VERSION}</span><span class="chip">Program ${esc(program.version)}</span><span class="chip">Schema 2</span></div><p class="small" style="margin-top:10px">Pure-black AMOLED interface. Program definitions, training engine, and user data are separate modules.</p></div>
+    <div class="card"><div class="kicker">Application</div><h2>THRESHOLD</h2><div class="row wrap"><span class="chip">App ${APP_VERSION}</span><span class="chip">Program ${esc(program.version)}</span><span class="chip">Schema 2</span></div><p class="small" style="margin-top:10px">Pure-black AMOLED training system. RETURN / 28, supplemental programs, First Motion, the training engine, and user data remain separate modules.</p></div>
 
     <div class="card"><div class="kicker">Runner</div>
       <label class="toggle"><span>3-2-1 pre-countdowns</span><input type="checkbox" data-setting="preCountdown" ${state.settings.preCountdown?'checked':''}></label>
@@ -442,6 +473,14 @@ function renderSettings(){
       <label class="toggle"><span>Daily command center</span><input type="checkbox" data-setting="commandCenter" ${state.settings.commandCenter?'checked':''}></label>
     </div>
 
+    <div class="card"><div class="kicker">Initiation layer</div><h2>First Motion</h2><p class="small">A separate on-ramp for days when representing the whole workout makes starting feel disproportionately difficult. The minimum is always honest: completing the first tiny action is enough.</p>
+      <label class="toggle"><span>Enable First Motion</span><input type="checkbox" data-setting="firstMotionEnabled" ${state.settings.firstMotionEnabled?'checked':''}></label>
+      <label class="toggle"><span>Adapt entry dose from successful starts</span><input type="checkbox" data-setting="firstMotionAdaptiveEntry" ${state.settings.firstMotionAdaptiveEntry?'checked':''}></label>
+      <div class="field" style="margin-top:12px"><label>Start rule</label><textarea id="firstMotionRule">${esc(state.firstMotion?.startRule||'')}</textarea></div>
+      <button class="btn secondary" id="saveFirstMotionRule">Save start rule</button><div class="spacer8"></div><button class="btn ghost" data-action="resetFirstMotion">Reset hidden entry ramp</button>
+      <p class="tiny" style="margin-top:10px">The ramp level is intentionally not shown during training. It rises only after repeated evidence that initiation has become easier and can step down after repeated hard starts.</p>
+    </div>
+
     <div class="card"><div class="kicker">Walking pad defaults</div><div class="grid2"><div class="field"><label>Minutes</label><input type="number" min="1" max="240" step="1" data-setting="walkGoalMinutes" value="${state.settings.walkGoalMinutes}"></div><div class="field"><label>Speed (mph)</label><input type="number" min="0.5" max="10" step="0.1" data-setting="walkSpeedMph" value="${state.settings.walkSpeedMph}"></div></div></div>
 
     <div class="card"><div class="kicker">Backup & restore</div><h3>Local data control</h3><p class="small">Export a complete JSON backup before major app updates. Import replaces the current local database only after validation; a pre-import copy is retained in local storage when possible.</p>
@@ -449,7 +488,7 @@ function renderSettings(){
       <button class="btn secondary" id="importButton">Import / restore JSON</button><input id="importFile" class="hidden" type="file" accept="application/json,.json">
     </div>
 
-    <div class="card"><div class="kicker">Installed programs</div>${renderInstalledProgramsSettings()}<p class="small" style="margin-top:10px">FOUNDATION / 28 remains the primary 28-session progression. Optional programs keep independent recurring schedules and never advance the primary program day.</p></div>
+    <div class="card"><div class="kicker">Installed programs</div>${renderInstalledProgramsSettings()}<p class="small" style="margin-top:10px">RETURN / 28 remains the primary 28-session progression. Optional programs keep independent recurring schedules and never advance the primary program day.</p></div>
 
     <div class="card"><div class="kicker">Maintenance</div><button class="btn secondary" data-action="update">Check/reload latest app files</button><div class="spacer8"></div><button class="btn danger" data-action="reset">Erase local training data</button></div>
   `;
@@ -461,6 +500,7 @@ function renderAfter(){
     if(select&&btn){select.addEventListener('change',()=>btn.disabled=!select.value);btn.addEventListener('click',()=>openExerciseHistory(select.value));}
   }
   if(currentView==='settings'){
+    $('#saveFirstMotionRule')?.addEventListener('click',()=>{const v=$('#firstMotionRule')?.value?.trim();if(v){state.firstMotion.startRule=v;persist();alert('Start rule saved.');}});
     $('#importButton')?.addEventListener('click',()=>$('#importFile')?.click());
     $('#importFile')?.addEventListener('change',async e=>{
       const file=e.target.files?.[0]; if(!file)return;
@@ -481,6 +521,68 @@ function closeModal(){
   if(!runner) releaseWake();
 }
 modal.addEventListener('click',e=>{if(e.target===modal && modal.dataset.lock!=='1')closeModal();});
+
+function resetFirstMotionCalibration(){
+  if(!confirm('Reset only the hidden First Motion entry ramp? Threshold-crossing history will be preserved.'))return;
+  state.firstMotion=resetFirstMotionRamp(state.firstMotion);persist();render();
+}
+function openFirstMotion(){
+  if(!state.settings.firstMotionEnabled)return;
+  let attempt=todayFirstMotion();
+  if(!attempt||attempt.endedAt){
+    const plan=firstMotionPlanForToday();
+    const begun=beginFirstMotionAttempt(state.firstMotion,{date:today(),programId:program.id,programDay:currentDay(),plan});
+    state.firstMotion=begun.firstMotion;attempt=begun.attempt;persist();
+  }
+  firstMotionRun={attemptId:attempt.id};keepAwake();if(attempt.minimumCompletedAt)showFirstMotionChoice((attempt.nextIndex||0)>=(attempt.plan?.steps?.length||0));else renderFirstMotionStep();
+}
+function currentFirstMotionRecord(){return state.firstMotion?.history?.find(x=>x.id===firstMotionRun?.attemptId)||null;}
+function renderFirstMotionStep(){
+  stopTimerController();
+  const attempt=currentFirstMotionRecord();if(!attempt){firstMotionRun=null;closeModal();return;}
+  const plan=attempt.plan||firstMotionPlanForToday(), index=Math.max(0,Number(attempt.nextIndex)||0);
+  if(attempt.minimumCompletedAt&&index>=plan.steps.length){showFirstMotionChoice(true);return;}
+  const step=plan.steps[index];if(!step){showFirstMotionChoice(true);return;}
+  const minimum=!attempt.minimumCompletedAt;
+  const copy=minimum?'Do this only. You may stop afterward.':'One more. Nothing beyond this is required.';
+  const safety='<div class="tiny" style="margin-top:12px">Do not use First Motion to push through chest pain, fainting, severe dizziness, unusual shortness of breath, loss of coordination, or a movement that conflicts with an active restriction.</div>';
+  const base=`<div class="step-top"><div><div class="kicker">FIRST MOTION</div><h2>${minimum?'Cross the threshold':'Only this next action'}</h2></div><button class="chip" id="firstMotionExit">Exit</button></div><p>${copy}</p><div class="hero-move">${esc(step.name)}</div><div class="target">${esc(step.target)}</div>${step.forceRegression?'<div class="alert warn">Use the documented regression required by your current return-to-training stage.</div><div class="spacer8"></div>':''}<div class="instruction">${esc(step.cue||'Move comfortably and under control.')}</div><hr>`;
+  if(step.type==='timer'){
+    showModal(base+timerMarkup(step.seconds)+`<button class="btn" id="timerMain">Start</button>${safety}`,{lock:true});
+    $('#timerMain').addEventListener('click',()=>startCountdownAndTimer(step,{seconds:step.seconds,onComplete:()=>completeFirstMotionStep(minimum)}));
+  }else{
+    showModal(base+`<div class="alert">Complete ${esc(step.target)} at a comfortable, controlled pace.</div><div class="spacer12"></div><button class="btn" id="firstMotionDone">I DID IT</button>${safety}`,{lock:true});
+    $('#firstMotionDone').addEventListener('click',()=>{cue(state.settings,'Complete',{freq:880,duration:.1,speech:false});completeFirstMotionStep(minimum);});
+  }
+  $('#firstMotionExit').addEventListener('click',exitFirstMotion);
+}
+function completeFirstMotionStep(minimum){
+  const result=markFirstMotionStep(state.firstMotion,firstMotionRun.attemptId,{minimum});state.firstMotion=result.firstMotion;persist();
+  if(minimum)showFirstMotionChoice(false);else showFirstMotionChoice((result.attempt?.nextIndex||0)>=(result.attempt?.plan?.steps?.length||0));
+}
+function showFirstMotionChoice(planComplete=false){
+  const attempt=currentFirstMotionRecord();if(!attempt)return;
+  const nextAvailable=(Number(attempt.nextIndex)||0)<(attempt.plan?.steps?.length||0);
+  showModal(`<div class="kicker">${attempt.continuedSteps?'Momentum preserved':'THRESHOLD CROSSED'}</div><h2>${attempt.continuedSteps?'One more complete.':'Today’s minimum is complete.'}</h2><p><strong>You may stop here.</strong> That is a successful First Motion entry, not a failed workout.</p>${nextAvailable?`<button class="btn secondary" id="firstMotionMore">ONE MORE</button><div class="spacer8"></div>`:''}${state.programState.status==='active'&&!completedProgramToday()?`<button class="btn ${nextAvailable?'ghost':'secondary'}" id="firstMotionHandoff">START RETURN / 28</button><div class="spacer8"></div>`:''}<button class="btn good" id="firstMotionStop">STOP HERE — SUCCESS</button>`,{lock:true});
+  $('#firstMotionMore')?.addEventListener('click',renderFirstMotionStep);
+  $('#firstMotionHandoff')?.addEventListener('click',()=>finishFirstMotionAndHandoff());
+  $('#firstMotionStop').addEventListener('click',showFirstMotionFinishPrompt);
+}
+function showFirstMotionFinishPrompt(){
+  showModal(`<div class="kicker">Saved as success</div><h2>Threshold crossed.</h2><p>The minimum already counts. One optional tap helps the hidden ramp calibrate; you can also finish without rating it.</p><div class="grid3"><button class="btn ghost" data-feel="easy">Easy</button><button class="btn ghost" data-feel="moderate">Okay</button><button class="btn ghost" data-feel="hard">Hard</button></div><div class="spacer12"></div><button class="btn good" id="firstMotionFinishNeutral">DONE</button>`,{lock:true});
+  $$('[data-feel]',sheet).forEach(b=>b.addEventListener('click',()=>finalizeFirstMotion('stop',b.dataset.feel)));
+  $('#firstMotionFinishNeutral').addEventListener('click',()=>finalizeFirstMotion('stop',null));
+}
+function finalizeFirstMotion(outcome='stop',difficulty=null,{handoff=false}={}){
+  const result=finishFirstMotionAttempt(state.firstMotion,firstMotionRun.attemptId,{outcome,difficulty,handoff});state.firstMotion=result.firstMotion;persist();firstMotionRun=null;releaseWake();closeModal();render();
+}
+function finishFirstMotionAndHandoff(){
+  const result=finishFirstMotionAttempt(state.firstMotion,firstMotionRun.attemptId,{outcome:'handoff',handoff:true});state.firstMotion=result.firstMotion;persist();firstMotionRun=null;releaseWake();closeModal();
+  requestProgramStart('recommended');
+}
+function exitFirstMotion(){
+  stopTimerController();firstMotionRun=null;releaseWake();closeModal();render();
+}
 
 function openReadiness(continuation=null){
   readinessContinuation=continuation;
@@ -615,10 +717,10 @@ function openSessionPreview(day=currentDay()){
   const adapted=materializeDefinition(raw,'program','recommended');
   showModal(`<div class="step-top"><div><div class="kicker">Session preview</div><h2>Day ${day} · Week ${raw.week}</h2></div><button class="chip" data-action="close">Close</button></div>
     <p>${esc(raw.title)} · ${esc(raw.goal)}</p><div class="row wrap"><span class="chip">~${secondsFmt(estimated)}</span><span class="chip">${raw.steps.length} steps</span>${ready?`<span class="chip ${ready.band==='green'?'good':ready.band==='yellow'?'warn':'bad'}">Readiness ${ready.score}</span>`:''}${affected.length?`<span class="chip warn">${affected.length} blocked</span>`:''}${collision.severity!=='none'?`<span class="chip ${collisionClass(collision.severity)}">${esc(collisionLabel(collision.severity))}</span>`:''}</div>
-    ${rec.reasons.length?`<div class="alert ${rec.recommendRecovery?'bad':'warn'}" style="margin-top:12px"><strong>Adaptive recommendation:</strong> ${rec.recommendRecovery?'Recovery preferred. ':''}${Math.round(rec.factor*100)}% work volume${rec.restMultiplier>1?` · ${Math.round((rec.restMultiplier-1)*100)}% longer explicit rests`:''}. ${esc(rec.reasons.join('; '))}</div>`:`<div class="alert good" style="margin-top:12px">Adaptive control does not currently recommend reducing this FOUNDATION session.</div>`}
-    ${collision.severity==='moderate'||collision.severity==='high'?`<div class="alert warn" style="margin-top:8px"><strong>Collision management:</strong> ${esc(collision.topMuscles.join(', '))}. FOUNDATION / 28 remains the priority program; if you also perform the add-on, its preview will carry the stronger reduction.</div>`:''}
+    ${rec.reasons.length?`<div class="alert ${rec.recommendRecovery?'bad':'warn'}" style="margin-top:12px"><strong>Adaptive recommendation:</strong> ${rec.recommendRecovery?'Recovery preferred. ':''}${Math.round(rec.factor*100)}% work volume${rec.restMultiplier>1?` · ${Math.round((rec.restMultiplier-1)*100)}% longer explicit rests`:''}. ${esc(rec.reasons.join('; '))}</div>`:`<div class="alert good" style="margin-top:12px">Adaptive control does not currently recommend reducing this RETURN / 28 session.</div>`}
+    ${collision.severity==='moderate'||collision.severity==='high'?`<div class="alert warn" style="margin-top:8px"><strong>Collision management:</strong> ${esc(collision.topMuscles.join(', '))}. RETURN / 28 remains the priority program; if you also perform the add-on, its preview will carry the stronger reduction.</div>`:''}
     <div class="section-title">Recommended sequence</div><div class="list">${adapted.steps.map((step,i)=>{const r=restrictionMatches(step,blocked),ret=returnAdjustmentForStep(state,step);return `<div class="list-item ${r.restricted?'restricted':''}"><div class="row between"><div><strong>${i+1}. ${esc(step.name)}</strong><div class="small">${esc(step.phase)} · ${esc(step.target)}</div></div>${r.restricted?'<span class="chip bad">BLOCKED</span>':ret.stage!==null&&ret.stage>0?`<span class="chip warn">RETURN ${ret.stage}</span>`:''}</div>${step.forceRegression?`<div class="tiny" style="margin-top:5px">Regression required for this return stage.</div>`:''}</div>`;}).join('')}</div>
-    <div class="spacer12"></div>${canStart?`${rec.recommendRecovery?`<button class="btn good" id="previewRecovery">Open recovery instead</button><div class="spacer8"></div>`:''}<button class="btn" id="previewStartRecommended">${incompleteSession('program',day)?'Resume session':rec.factor<1||rec.restMultiplier>1?`Start recommended · ${Math.round(rec.factor*100)}%`:'Start session'}</button>${rec.factor<1||rec.restMultiplier>1?`<div class="spacer8"></div><button class="btn ghost" id="previewStartFull">Start without readiness/collision reduction</button>`:''}`:`<div class="alert">${doneToday?'FOUNDATION / 28 is already complete for today.':'Preview only. The active program is currently unavailable to start.'}</div>`}`);
+    <div class="spacer12"></div>${canStart?`${rec.recommendRecovery?`<button class="btn good" id="previewRecovery">Open recovery instead</button><div class="spacer8"></div>`:''}<button class="btn" id="previewStartRecommended">${incompleteSession('program',day)?'Resume session':rec.factor<1||rec.restMultiplier>1?`Start recommended · ${Math.round(rec.factor*100)}%`:'Start session'}</button>${rec.factor<1||rec.restMultiplier>1?`<div class="spacer8"></div><button class="btn ghost" id="previewStartFull">Start without readiness/collision reduction</button>`:''}`:`<div class="alert">${doneToday?'RETURN / 28 is already complete for today.':'Preview only. The active program is currently unavailable to start.'}</div>`}`);
   $('#previewRecovery')?.addEventListener('click',openRecoveryPreview);
   $('#previewStartRecommended')?.addEventListener('click',()=>requestProgramStart('recommended'));
   $('#previewStartFull')?.addEventListener('click',()=>requestProgramStart('full'));
@@ -635,7 +737,7 @@ function requestProgramStart(mode='recommended'){
 function beginProgramSession(mode='recommended'){
   if(completedProgramToday())return;
   const raw=program.buildSession(currentDay()), def=materializeDefinition(raw,'program',mode), rec=recommendationFor(raw,'program');
-  if(mode==='recommended'&&rec.recommendRecovery&&!confirm('Today’s readiness recommends recovery. Continue with the conservative scaled FOUNDATION session anyway?')){openRecoveryPreview();return;}
+  if(mode==='recommended'&&rec.recommendRecovery&&!confirm('Today’s readiness recommends recovery. Continue with the conservative scaled RETURN / 28 session anyway?')){openRecoveryPreview();return;}
   const session={
     id:newId('session'),date:today(),kind:'program',programId:program.id,programVersion:program.version,programDay:currentDay(),week:raw.week,title:raw.title,
     startedAt:nowIso(),completedAt:null,abandonedAt:null,sourceDefinition:raw.steps,definition:def.steps,adaptivePlan:{mode,...def.adaptivePlan},steps:[],segments:[],rpe:null,notes:'',activeSeconds:0,recoverySeconds:0,otherSeconds:0,totalSeconds:0,trainingLoad:null
@@ -653,7 +755,7 @@ function openSupplementalPreview(programId){
     <div class="row wrap"><span class="chip">${esc(p.schedule?.label||'Recurring')}</span><span class="chip">~${secondsFmt(estimateSessionSeconds(raw,state.settings.preCountdown))}</span>${ready?`<span class="chip ${ready.band==='green'?'good':ready.band==='yellow'?'warn':'bad'}">Readiness ${ready.score}</span>`:''}${collision.severity!=='none'?`<span class="chip ${collisionClass(collision.severity)}">${esc(collisionLabel(collision.severity))}</span>`:''}</div>
     ${p.progressionNote?`<div class="alert" style="margin-top:12px">${esc(p.progressionNote)}</div>`:''}
     ${rec.reasons.length?`<div class="alert ${rec.recommendRecovery?'bad':'warn'}" style="margin-top:8px"><strong>Recommended add-on dose:</strong> ${rec.recommendRecovery?'Recovery preferred; if you intentionally train, ':''}${Math.round(rec.factor*100)}% work volume${rec.restMultiplier>1?` · ${Math.round((rec.restMultiplier-1)*100)}% longer rests`:''}. ${esc(rec.reasons.join('; '))}</div>`:`<div class="alert good" style="margin-top:8px">No adaptive reduction is currently recommended.</div>`}
-    ${collision.topMuscles.length?`<div class="alert ${collisionClass(collision.severity)}" style="margin-top:8px"><strong>Same-day overlap:</strong> ${collision.topMuscles.map(esc).join(', ')}. The supplemental program takes the reduction before the primary FOUNDATION prescription.</div>`:''}
+    ${collision.topMuscles.length?`<div class="alert ${collisionClass(collision.severity)}" style="margin-top:8px"><strong>Same-day overlap:</strong> ${collision.topMuscles.map(esc).join(', ')}. The supplemental program takes the reduction before the primary RETURN / 28 prescription.</div>`:''}
     ${!enabled?`<div class="alert" style="margin-top:8px">Installed but disabled.</div>`:done?`<div class="alert good" style="margin-top:8px">Today’s add-on is already complete.</div>`:!due?`<div class="alert" style="margin-top:8px">Preview only today. Next: ${next?prettyDate(next):esc(p.schedule?.label||'scheduled day')}.</div>`:''}
     <div class="section-title">Recommended sequence</div><div class="list">${adapted.steps.map((step,i)=>{const r=restrictionMatches(step,blocked),ret=returnAdjustmentForStep(state,step);return `<div class="list-item ${r.restricted?'restricted':''}"><div class="row between"><div><strong>${i+1}. ${esc(step.name)}</strong><div class="small">${esc(step.phase)} · ${esc(step.target)}</div></div>${step.isRest?'<span class="chip">REST</span>':r.restricted?'<span class="chip bad">BLOCKED</span>':ret.stage!==null&&ret.stage>0?`<span class="chip warn">RETURN ${ret.stage}</span>`:''}</div></div>`;}).join('')}</div>
     <div class="spacer12"></div>${canStart?`${rec.recommendRecovery?`<button class="btn good" id="suppRecovery">Open recovery instead</button><div class="spacer8"></div>`:''}<button class="btn" id="suppRecommended">${unfinished?'Resume scheduled session':rec.factor<1||rec.restMultiplier>1?`Start recommended · ${Math.round(rec.factor*100)}%`:'Start scheduled session'}</button>${!unfinished&&(rec.factor<1||rec.restMultiplier>1)?`<div class="spacer8"></div><button class="btn ghost" id="suppFull">Start without readiness/collision reduction</button>`:''}`:''}`);
@@ -951,7 +1053,7 @@ function openSessionHistory(){
 }
 
 function resetData(){
-  if(!confirm('Erase all FOUNDATION / 28 v2 local training data on this browser? This cannot be undone unless you have an exported backup.'))return;
+  if(!confirm('Erase all THRESHOLD local training data on this browser? This cannot be undone unless you have an exported backup.'))return;
   state=resetAll();persist();program=getProgram(state.activeProgramId);render();
 }
 

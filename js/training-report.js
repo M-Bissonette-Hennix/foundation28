@@ -18,10 +18,11 @@ export function buildTrainingReport(state,{days=28,endDate=isoDate()}={}){
   const rpes=sessions.map(s=>Number(s.rpe)).filter(Number.isFinite);
   const weightStart=weights[0]?.value??null,weightEnd=weights.at(-1)?.value??null;
   return {
-    reportFormat:'foundation28-training-report',reportVersion:1,generatedAt:new Date().toISOString(),window:{days,startDate,endDate},
+    reportFormat:'threshold-training-report',reportVersion:1,generatedAt:new Date().toISOString(),window:{days,startDate,endDate},
     appVersion:state.appVersion,schemaVersion:state.schemaVersion,
     summary:{
       completedSessions:sessions.length,
+      returnSessions:sessions.filter(s=>s.kind==='program').length,
       foundationSessions:sessions.filter(s=>s.kind==='program').length,
       supplementalSessions:sessions.filter(s=>s.kind==='supplemental').length,
       recoverySessions:sessions.filter(s=>s.kind==='recovery').length,
@@ -33,6 +34,13 @@ export function buildTrainingReport(state,{days=28,endDate=isoDate()}={}){
       weightStart,weightEnd,weightChange:weightStart!==null&&weightEnd!==null?Number((weightEnd-weightStart).toFixed(1)):null
     },
     loadAnalytics:load,muscleSetEquivalents:volume,
+    firstMotion:{
+      level:state.firstMotion?.level??0,
+      startRule:state.firstMotion?.startRule||'',
+      entries:(state.firstMotion?.history||[]).filter(x=>inWindow(x.date,startDate,endDate)),
+      thresholdCrossings:(state.firstMotion?.history||[]).filter(x=>x.minimumCompletedAt&&inWindow(x.date,startDate,endDate)).length,
+      handoffs:(state.firstMotion?.history||[]).filter(x=>x.handoffStarted&&inWindow(x.date,startDate,endDate)).length
+    },
     activeInjuries:(state.injuries||[]).filter(i=>i.status==='active'),sessions,walks,readinessEntries:readiness,painLogs:pain,weights
   };
 }
@@ -49,6 +57,6 @@ export function buildTrainingCsv(report){
 
 export function downloadTrainingReport(state,{days=28,format='json',endDate=isoDate()}={}){
   const report=buildTrainingReport(state,{days,endDate});const stamp=endDate;
-  if(format==='csv') downloadText(buildTrainingCsv(report),`foundation28-training-report-${days}d-${stamp}.csv`,'text/csv;charset=utf-8');
-  else downloadText(JSON.stringify(report,null,2),`foundation28-training-report-${days}d-${stamp}.json`,'application/json');
+  if(format==='csv') downloadText(buildTrainingCsv(report),`threshold-training-report-${days}d-${stamp}.csv`,'text/csv;charset=utf-8');
+  else downloadText(JSON.stringify(report,null,2),`threshold-training-report-${days}d-${stamp}.json`,'application/json');
 }

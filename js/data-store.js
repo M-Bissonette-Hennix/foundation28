@@ -1,7 +1,9 @@
+import { createFirstMotionState, normalizeFirstMotion } from './first-motion.js';
+
 const KEY = 'foundation28.v2';
 const LEGACY_KEY = 'foundation28.v1';
 export const SCHEMA_VERSION = 2;
-export const APP_VERSION = '2.2.0';
+export const APP_VERSION = '2.3.0';
 
 const nowIso = () => new Date().toISOString();
 const id = (prefix='id') => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
@@ -41,8 +43,11 @@ export function createDefaultState() {
       showPainPrompt: true,
       adaptiveScaling: true,
       collisionManagement: true,
-      commandCenter: true
+      commandCenter: true,
+      firstMotionEnabled: true,
+      firstMotionAdaptiveEntry: true
     },
+    firstMotion: createFirstMotionState(),
     readinessEntries: [],
     injuries: [],
     sessions: [],
@@ -57,6 +62,7 @@ function normalize(state) {
   const s = {...base, ...(state || {})};
   s.settings = {...base.settings, ...(state?.settings || {})};
   s.programState = {...base.programState, ...(state?.programState || {})};
+  s.firstMotion = normalizeFirstMotion(state?.firstMotion || base.firstMotion);
   s.supplementalPrograms = {...base.supplementalPrograms, ...(state?.supplementalPrograms || {})};
   for (const [programId, defaults] of Object.entries(base.supplementalPrograms)) {
     const prior = state?.supplementalPrograms?.[programId] || {};
@@ -69,7 +75,7 @@ function normalize(state) {
         : [...defaults.scheduleWeekdays]
     };
   }
-  const boolKeys=['tones','voiceCues','wakeLock','preCountdown','readinessGate','showPainPrompt','adaptiveScaling','collisionManagement','commandCenter'];
+  const boolKeys=['tones','voiceCues','wakeLock','preCountdown','readinessGate','showPainPrompt','adaptiveScaling','collisionManagement','commandCenter','firstMotionEnabled','firstMotionAdaptiveEntry'];
   for(const k of boolKeys)s.settings[k]=s.settings[k]!==false;
   const walkMinutes=Number(s.settings.walkGoalMinutes); s.settings.walkGoalMinutes=Number.isFinite(walkMinutes)?Math.min(240,Math.max(1,walkMinutes)):40;
   const walkSpeed=Number(s.settings.walkSpeedMph); s.settings.walkSpeedMph=Number.isFinite(walkSpeed)?Math.min(10,Math.max(.5,walkSpeed)):4;
@@ -153,7 +159,7 @@ export function newId(prefix='id') { return id(prefix); }
 
 export function createBackupObject(state) {
   return {
-    backupFormat: 'foundation28-backup',
+    backupFormat: 'threshold-backup',
     backupVersion: 1,
     exportedAt: nowIso(),
     appVersion: APP_VERSION,
@@ -167,7 +173,7 @@ export function downloadBackup(state) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `foundation28-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.download = `threshold-backup-${new Date().toISOString().slice(0,10)}.json`;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -175,8 +181,8 @@ export function downloadBackup(state) {
 }
 
 function validateImported(candidate) {
-  const rawState = candidate?.backupFormat === 'foundation28-backup' ? candidate.state : candidate;
-  if (!rawState || typeof rawState !== 'object') throw new Error('The selected file does not contain a FOUNDATION / 28 data object.');
+  const rawState = ['threshold-backup','foundation28-backup'].includes(candidate?.backupFormat) ? candidate.state : candidate;
+  if (!rawState || typeof rawState !== 'object') throw new Error('The selected file does not contain a THRESHOLD training-data object.');
   if (rawState.schemaVersion === 1 || rawState.sessions && !Array.isArray(rawState.sessions)) return migrateLegacyV1(rawState);
   if (Number(rawState.schemaVersion) !== SCHEMA_VERSION) throw new Error(`Unsupported data schema: ${rawState.schemaVersion ?? 'unknown'}.`);
   if (!rawState.programState || !rawState.settings) throw new Error('The backup is missing required program/settings data.');
